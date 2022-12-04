@@ -12,13 +12,18 @@ type Move struct {
 	winsAgainst *Move
 }
 
+type Outcome struct {
+	name  string
+	score int
+}
+
 var ROCK = Move{"ROCK", 1, nil}
 var PAPER = Move{"PAPER", 2, nil}
 var SCISSORS = Move{"SCISSORS", 3, nil}
 
-const LOSE_SCORE = 0
-const DRAW_SCORE = 3
-const WIN_SCORE = 6
+var LOSE = Outcome{"LOSE", 0}
+var DRAW = Outcome{"DRAW", 3}
+var WIN = Outcome{"WIN", 6}
 
 func main() {
 	ROCK.winsAgainst = &SCISSORS
@@ -28,46 +33,91 @@ func main() {
 	file, err := os.Open("./input.txt")
 	check(err)
 
-	totalScore := calculateTotalScore(file)
+	totalFakeScore, totalRealScore := calculateScores(file)
 
-	fmt.Println("Total score is", totalScore)
+	fmt.Println("We first thought total score is", totalFakeScore, ", but the real score is actually", totalRealScore)
 
 }
 
-func calculateTotalScore(file *os.File) int {
+func calculateScores(file *os.File) (int, int) {
 
-	totalScore := 0
+	totalFakeScore := 0
+	totalRealScore := 0
 
 	forLineOfFile(file, func(line string) {
-		totalScore += calculateScoreForRound(line[0:1], line[2:3])
+		totalFakeScore += calculateFakeScoreForRound(line[0:1], line[2:3])
+		totalRealScore += calculateRealScoreForRound(line[0:1], line[2:3])
 	})
 
-	return totalScore
+	return totalFakeScore, totalRealScore
 }
 
-func calculateScoreForRound(enemyMoveCode string, ourMoveCode string) int {
+// part two
+
+func calculateRealScoreForRound(enemyMoveCode string, ourMoveCode string) int {
 
 	roundScore := 0
 
-	enemyMove, ourMove := moveDecode(enemyMoveCode, ourMoveCode)
+	var ourMove Move
+	enemyMove, intendedOutcome := realMoveDecode(enemyMoveCode, ourMoveCode)
 
-	roundScore += ourMove.score
-
-	if ourMove == enemyMove {
-		roundScore += DRAW_SCORE
-	} else if *ourMove.winsAgainst == enemyMove {
-		roundScore += WIN_SCORE
+	if intendedOutcome == DRAW {
+		ourMove = enemyMove
+	} else if intendedOutcome == LOSE {
+		ourMove = *enemyMove.winsAgainst
 	} else {
-		roundScore += LOSE_SCORE
+		ourMove = *enemyMove.winsAgainst.winsAgainst
 	}
 
-	fmt.Println(enemyMove, ourMove, roundScore)
+	roundScore += ourMove.score
+	roundScore += intendedOutcome.score
 
 	return roundScore
 
 }
 
-func moveDecode(enemyMoveCode string, ourMoveCode string) (Move, Move) {
+func realMoveDecode(enemyMoveCode string, intendedOutcomeCode string) (Move, Outcome) {
+	var enemyMoves = map[string]Move{
+		"A": ROCK,
+		"B": PAPER,
+		"C": SCISSORS,
+	}
+
+	var intendedOutcomes = map[string]Outcome{
+		"X": LOSE,
+		"Y": DRAW,
+		"Z": WIN,
+	}
+
+	enemyMove := enemyMoves[enemyMoveCode]
+	intendedOutcome := intendedOutcomes[intendedOutcomeCode]
+
+	return enemyMove, intendedOutcome
+}
+
+// part one
+
+func calculateFakeScoreForRound(enemyMoveCode string, ourMoveCode string) int {
+
+	roundScore := 0
+
+	enemyMove, ourMove := fakeMoveDecode(enemyMoveCode, ourMoveCode)
+
+	roundScore += ourMove.score
+
+	if ourMove == enemyMove {
+		roundScore += DRAW.score
+	} else if *ourMove.winsAgainst == enemyMove {
+		roundScore += WIN.score
+	} else {
+		roundScore += LOSE.score
+	}
+
+	return roundScore
+
+}
+
+func fakeMoveDecode(enemyMoveCode string, ourMoveCode string) (Move, Move) {
 	var dictionary = map[string]Move{
 		"A": ROCK,
 		"X": ROCK,
@@ -77,8 +127,8 @@ func moveDecode(enemyMoveCode string, ourMoveCode string) (Move, Move) {
 		"Z": SCISSORS,
 	}
 
-	ourMove := dictionary[ourMoveCode]
 	enemyMove := dictionary[enemyMoveCode]
+	ourMove := dictionary[ourMoveCode]
 
 	return enemyMove, ourMove
 }
