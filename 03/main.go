@@ -10,22 +10,53 @@ func main() {
 	file, err := os.Open("./input.txt")
 	check(err)
 
-	priority := calculateTotalItemPriority(file)
+	totalPriority, badgePriority := calculateTotalItemPriorities(file)
 
-	fmt.Println("Total item priority is", priority)
+	fmt.Println("Total item priority is", totalPriority, ", while the total priority of the group badges is", badgePriority)
 }
 
-func calculateTotalItemPriority(file *os.File) int {
+func calculateTotalItemPriorities(file *os.File) (int, int) {
 
 	totalPriority := 0
+	badgePriority := 0
+
+	groupsOfThree := make([]string, 3)
+	groupCounter := 0
 
 	forLineOfFile(file, func(line string) {
 		misplacedItem := findMisplacedItem(line)
 		totalPriority += calculateItemPriority(misplacedItem)
 
+		groupsOfThree[groupCounter] = line
+		if groupCounter == 2 {
+			groupCounter = 0
+			badgePriority += calculateItemPriority(findGroupBadge(groupsOfThree[0], groupsOfThree[1], groupsOfThree[2]))
+		} else {
+			groupCounter++
+		}
 	})
 
-	return totalPriority
+	return totalPriority, badgePriority
+}
+
+func findGroupBadge(rucksackOne string, rucksackTwo string, rucksackThree string) rune {
+	rucksacksUniqueItems := [3][]rune{getUniqueItems(rucksackOne), getUniqueItems(rucksackTwo), getUniqueItems(rucksackThree)}
+	// rucksackOneUniqueItems := getUniqueItems(rucksackOne)
+	// rucksackTwoUniqueItems := getUniqueItems(rucksackTwo)
+	// rucksackThreeUniqueItems := getUniqueItems(rucksackThree)
+
+	itemsMap := map[rune]int{}
+
+	for _, rucksack := range rucksacksUniqueItems {
+		for _, item := range rucksack {
+			itemsMap[item]++
+			if itemsMap[item] == 3 {
+				return item
+			}
+		}
+	}
+
+	panic("No group badge found")
 }
 
 func calculateItemPriority(item rune) int {
@@ -42,8 +73,8 @@ func calculateItemPriority(item rune) int {
 }
 
 func findMisplacedItem(rucksack string) rune {
-	firstCompartment := getUniqueItemsInCompartment(rucksack[0 : len(rucksack)/2])
-	secondCompartment := getUniqueItemsInCompartment(rucksack[len(rucksack)/2:])
+	firstCompartment := getUniqueItems(rucksack[0 : len(rucksack)/2])
+	secondCompartment := getUniqueItems(rucksack[len(rucksack)/2:])
 
 	for _, firstItem := range firstCompartment {
 		for _, secondItem := range secondCompartment {
@@ -55,24 +86,19 @@ func findMisplacedItem(rucksack string) rune {
 	panic("No misplaced item found")
 }
 
-func getUniqueItemsInCompartment(compartment string) []rune {
+func getUniqueItems(collection string) []rune {
 	uniquesMap := map[rune]bool{}
 
-	for _, item := range compartment {
+	uniques := []rune{}
+
+	for _, item := range collection {
 		if uniquesMap[item] != true {
 			uniquesMap[item] = true
+			uniques = append(uniques, item)
 		}
 	}
 
-	uniqueChars := make([]rune, len(uniquesMap))
-
-	i := 0
-	for key, _ := range uniquesMap {
-		uniqueChars[i] = key
-		i++
-	}
-
-	return uniqueChars
+	return uniques
 }
 
 // general utils
