@@ -41,9 +41,6 @@ func calculateTotalItemPriorities(file *os.File) (int, int) {
 
 func findGroupBadge(rucksackOne string, rucksackTwo string, rucksackThree string) rune {
 	rucksacksUniqueItems := [3][]rune{getUniqueItems(rucksackOne), getUniqueItems(rucksackTwo), getUniqueItems(rucksackThree)}
-	// rucksackOneUniqueItems := getUniqueItems(rucksackOne)
-	// rucksackTwoUniqueItems := getUniqueItems(rucksackTwo)
-	// rucksackThreeUniqueItems := getUniqueItems(rucksackThree)
 
 	itemsMap := map[rune]int{}
 
