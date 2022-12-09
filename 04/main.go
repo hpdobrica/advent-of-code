@@ -9,32 +9,40 @@ import (
 )
 
 func main() {
-	inputFile, err := os.Open("joka-input.txt")
+	inputFile, err := os.Open("input.txt")
 	check(err)
 	defer inputFile.Close()
 
-	overlappingPairs := getOverlappingPairCount(inputFile)
+	totallyOverlappingPairs, partiallyOverlappingPairs := getOverlappingPairCount(inputFile)
 
-	fmt.Println("There are", overlappingPairs, "overlapping pairs")
+	fmt.Println("There are", totallyOverlappingPairs, "totally overlapping pairs, and", partiallyOverlappingPairs, "partially overlapping pairs.")
 
 }
 
-func getOverlappingPairCount(inputFile *os.File) int {
-	overlappingPairs := 0
+func getOverlappingPairCount(inputFile *os.File) (int, int) {
+	totallyOverlappingPairs := 0
+	partiallyOverlappingPairs := 0
 
 	forLineOfFile(inputFile, func(line string) {
 		first, second, third, fourth := extractData(line)
-		if isOverlapping(first, second, third, fourth) {
-			overlappingPairs++
+		if isTotallyOverlapping(first, second, third, fourth) {
+			totallyOverlappingPairs++
+			partiallyOverlappingPairs++
+		} else if isPartiallyOverlapping(first, second, third, fourth) {
+			partiallyOverlappingPairs++
 		}
 		fmt.Println(first, second, third, fourth)
 	})
 
-	return overlappingPairs
+	return totallyOverlappingPairs, partiallyOverlappingPairs
 }
 
-func isOverlapping(first int, second int, third int, fourth int) bool {
+func isTotallyOverlapping(first int, second int, third int, fourth int) bool {
 	return (first <= third && second >= fourth) || (third <= first && fourth >= second)
+}
+
+func isPartiallyOverlapping(first int, second int, third int, fourth int) bool {
+	return second >= third && first <= fourth
 }
 
 func extractData(line string) (int, int, int, int) {
