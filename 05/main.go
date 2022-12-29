@@ -16,59 +16,81 @@ const (
 )
 
 type Dock struct {
-	stacks []Stack
-	stage  Stage
+	stacks9000 []Stack
+	stacks9001 []Stack
+	stage      Stage
 }
 
 type Stack []string
 
 func (d *Dock) loadDock(input []string) {
 
-	// numOfStacks := 0
+	// calculate the number of stacks
 	for index, line := range input {
-		// fmt.Println(line, index)
 		if index == 0 {
 			re := regexp.MustCompile(`.*(\d) `)
 			match := re.FindStringSubmatch(line)
-			// fmt.Println(match)
 			numOfStacks, _ := strconv.Atoi(match[1])
 			for i := 0; i < numOfStacks; i++ {
-				d.stacks = append(d.stacks, Stack{})
+				d.stacks9000 = append(d.stacks9000, Stack{})
+				d.stacks9001 = append(d.stacks9001, Stack{})
 			}
 			continue
 		}
 
+		// populate each stack
 		re := regexp.MustCompile(`.(.). .(.). .(.). .(.). .(.). .(.). .(.). .(.). .(.).`)
 		match := re.FindStringSubmatch(line)
 		for index, crate := range match[1:] {
 			if crate != " " {
-				d.stacks[index] = append(d.stacks[index], crate)
+				d.stacks9000[index] = append(d.stacks9000[index], crate)
+				d.stacks9001[index] = append(d.stacks9001[index], crate)
 			}
 		}
 
 	}
+	fmt.Println("Docks loaded, printing docks...")
+	d.printDocks()
 }
 
-func (d *Dock) moveCrates(amount, source, target int) {
+func (d *Dock) moveCrates9000(amount, source, target int) {
 
 	for i := 0; i < amount; i++ {
-		crate := pop(&d.stacks[source-1])
-		d.stacks[target-1] = append(d.stacks[target-1], crate)
+		crate := pop(&d.stacks9000[source-1])
+		d.stacks9000[target-1] = append(d.stacks9000[target-1], crate)
 	}
 
 }
 
-func (d *Dock) printDock() {
-	for _, stack := range d.stacks {
+func (d *Dock) moveCrates9001(amount, source, target int) {
+	crates := multiPop(&d.stacks9001[source-1], amount)
+	for _, crate := range crates {
+		d.stacks9001[target-1] = append(d.stacks9001[target-1], crate)
+	}
+}
+
+func (d *Dock) printDocks() {
+	fmt.Println("stack of CrateMover 9000:")
+	for _, stack := range d.stacks9000 {
+		fmt.Println(stack)
+	}
+	fmt.Println("stack of CrateMover 9001:")
+	for _, stack := range d.stacks9001 {
 		fmt.Println(stack)
 	}
 }
 
 func (d *Dock) printTopOfDock() {
-	fmt.Println("Top of dock:")
-	for _, stack := range d.stacks {
+	fmt.Println("Top of dock of StackMover 9000:")
+	for _, stack := range d.stacks9000 {
 		fmt.Print(stack[len(stack)-1])
 	}
+	fmt.Println()
+	fmt.Println("Top of dock of StackMover 9001:")
+	for _, stack := range d.stacks9001 {
+		fmt.Print(stack[len(stack)-1])
+	}
+	fmt.Println()
 }
 
 func (d *Dock) processInput(file *os.File) {
@@ -91,12 +113,15 @@ func (d *Dock) processInput(file *os.File) {
 			source, _ := strconv.Atoi(match[2])
 			target, _ := strconv.Atoi(match[3])
 
-			d.moveCrates(amount, source, target)
+			d.moveCrates9000(amount, source, target)
+			d.moveCrates9001(amount, source, target)
 		}
 
 	})
 
-	d.printDock()
+	fmt.Println("processinc completed, printing docks...")
+
+	d.printDocks()
 	d.printTopOfDock()
 
 }
@@ -104,7 +129,8 @@ func (d *Dock) processInput(file *os.File) {
 func NewDock() *Dock {
 	dock := &Dock{}
 	dock.stage = Load
-	dock.stacks = []Stack{}
+	dock.stacks9000 = []Stack{}
+	dock.stacks9001 = []Stack{}
 
 	return dock
 }
@@ -148,4 +174,11 @@ func pop(s *Stack) string {
 	last := (*s)[len-1]
 	*s = (*s)[:len-1]
 	return last
+}
+
+func multiPop(s *Stack, amount int) []string {
+	len := len(*s)
+	popped := (*s)[len-amount:]
+	*s = (*s)[:len-amount]
+	return popped
 }
