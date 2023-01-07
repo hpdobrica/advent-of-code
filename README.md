@@ -1,5 +1,5 @@
-# advent-of-code-2022
+# advent-of-code
 
 
-Playing with https://adventofcode.com/2022 in Golang.
+Playing with https://adventofcode.com in Golang.
 
