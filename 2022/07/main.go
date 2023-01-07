@@ -11,6 +11,7 @@ import (
 type FS struct {
 	currentDir *Dir
 	root       *Dir
+	diskSize   int
 }
 
 func (f *FS) cd(arg string) {
@@ -37,11 +38,12 @@ func (f *FS) cd(arg string) {
 
 }
 
-func NewFS() *FS {
+func NewFS(diskSize int) *FS {
 	root := NewDir("/", nil)
 	return &FS{
 		currentDir: root,
 		root:       root,
+		diskSize:   diskSize,
 	}
 }
 
@@ -85,7 +87,10 @@ func main() {
 	check(err)
 	defer inputFile.Close()
 
-	fs := NewFS()
+	TOTAL_DISK_SIZE := 70000000
+	UPDATE_SIZE := 30000000
+
+	fs := NewFS(TOTAL_DISK_SIZE)
 
 	populateFsFromInputFile(fs, inputFile)
 
@@ -93,6 +98,9 @@ func main() {
 
 	sumUpToHundredK := sumDirsUpToHundredK(fs.root, 0)
 	fmt.Println("sum of dir sizes up to hundred k is", sumUpToHundredK)
+
+	dirToDelete := findDirToDeleteForUpdate(fs, UPDATE_SIZE)
+	fmt.Println("dir to delete for update has the size of", dirToDelete.totalSize)
 
 }
 
@@ -169,9 +177,8 @@ func printTree(dir *Dir, level int) {
 	}
 }
 
-func sumDirsUpToHundredK(dir *Dir, sum int) int {
+func sumDirsUpToHundredK(dir *Dir, currentSum int) int {
 	currentDir := dir
-	currentSum := sum
 
 	if currentDir.totalSize <= 100000 {
 		currentSum += currentDir.totalSize
@@ -180,6 +187,34 @@ func sumDirsUpToHundredK(dir *Dir, sum int) int {
 		currentSum = sumDirsUpToHundredK(child, currentSum)
 	}
 	return currentSum
+
+}
+
+func findDirToDeleteForUpdate(fs *FS, updateSize int) *Dir {
+	freeSpace := fs.diskSize - fs.root.totalSize
+	spaceNeeded := updateSize - freeSpace
+
+	return findSmallestDir(spaceNeeded, fs.root, nil)
+
+}
+
+func findSmallestDir(minSize int, currentDir, currentSmallestDir *Dir) *Dir {
+	if currentDir == nil {
+		panic("must specify a root directory when looking for smallest directory")
+	}
+
+	if currentSmallestDir == nil {
+		currentSmallestDir = currentDir
+	}
+
+	if currentDir.totalSize < currentSmallestDir.totalSize && currentDir.totalSize >= minSize {
+		currentSmallestDir = currentDir
+	}
+
+	for _, child := range currentDir.dirs {
+		currentSmallestDir = findSmallestDir(minSize, child, currentSmallestDir)
+	}
+	return currentSmallestDir
 
 }
 
