@@ -113,6 +113,11 @@ func populateFsFromInputFile(fs *FS, input *os.File) {
 		currentCommandOutput = append(currentCommandOutput, line)
 	})
 
+	// if last line was not executable, execute last command now
+	if string(currentCommand[0]) != "$" {
+		processCurrentCommand(fs, currentCommand, currentCommandOutput)
+	}
+
 }
 
 func processCurrentCommand(fs *FS, command string, output []string) {
