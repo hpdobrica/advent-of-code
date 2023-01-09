@@ -76,10 +76,14 @@ func (f Forest) CountTreesVisibleFromEdge() int {
 	// 	}
 	// }
 	visibleTrees := map[string]bool{}
-	f.getTreesVisibleFromTop(&visibleTrees)
-	f.getTreesVisibleFromRight(&visibleTrees)
-	f.getTreesVisibleFromBottom(&visibleTrees)
-	f.getTreesVisibleFromLeft(&visibleTrees)
+	// f.getTreesVisibleFromTop(&visibleTrees)
+	// f.getTreesVisibleFromRight(&visibleTrees)
+	// f.getTreesVisibleFromBottom(&visibleTrees)
+	// f.getTreesVisibleFromLeft(&visibleTrees)
+	f.getTreesVisible("top", &visibleTrees)
+	f.getTreesVisible("right", &visibleTrees)
+	f.getTreesVisible("bottom", &visibleTrees)
+	f.getTreesVisible("left", &visibleTrees)
 	fmt.Println(visibleTrees)
 	count := countTruesInMap(visibleTrees)
 	f.PrintMask(visibleTrees)
@@ -97,107 +101,82 @@ func countTruesInMap(m map[string]bool) int {
 	return count
 }
 
-func (f Forest) getTreesVisibleFromTop(visibleTreesMap *map[string]bool) {
-	for i := 0; i < len(f); i++ {
+func (f Forest) getTreesVisible(direction string, visibleTreesMap *map[string]bool) {
+	iDir := ""
+	jDir := ""
+	iFirst := true
+	if direction == "top" {
+		iDir = "forward"
+		jDir = "forward"
+		iFirst = false
+	} else if direction == "right" {
+		iDir = "forward"
+		jDir = "back"
+		iFirst = true
+	} else if direction == "bottom" {
+		iDir = "back"
+		jDir = "back"
+		iFirst = false
+	} else if direction == "left" {
+		iDir = "forward"
+		jDir = "forward"
+		iFirst = true
+	}
+
+	directionalFor(f, iDir, func(i int, iVal []int) string {
 		biggestSoFar := 0
-		for j := 0; j < len(f[0]); j++ {
-			if f[j][i] == 9 {
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				break
-			}
-			if j == 0 {
-				biggestSoFar = f[j][i]
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				continue
-			}
-			if f[j][i] > biggestSoFar {
-				biggestSoFar = f[j][i]
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				continue
+		directionalFor(iVal, jDir, func(j int, jVal int) string {
+			if getTree(f, i, j, iFirst) == 9 {
+				(*visibleTreesMap)[makeTreeKey(i, j, iFirst)] = true
+				return "break"
 			}
 
-		}
-	}
-	fmt.Println(*visibleTreesMap)
+			if jDir == "forward" && j == 0 || jDir == "back" && j == len(f[i])-1 {
+				biggestSoFar = getTree(f, i, j, iFirst)
+				(*visibleTreesMap)[makeTreeKey(i, j, iFirst)] = true
+				return ""
+			}
+
+			if getTree(f, i, j, iFirst) > biggestSoFar {
+				biggestSoFar = getTree(f, i, j, iFirst)
+				(*visibleTreesMap)[makeTreeKey(i, j, iFirst)] = true
+				return ""
+			}
+			return ""
+		})
+		return ""
+	})
 }
 
-func (f Forest) getTreesVisibleFromRight(visibleTreesMap *map[string]bool) {
-	for i := 0; i < len(f); i++ {
-		biggestInRow := 0
-		for j := len(f[i]) - 1; j >= 0; j-- {
-			fmt.Println("processing", i, j)
-			if f[i][j] == 9 {
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
-				break
-			}
-			if j == len(f[i])-1 {
-				fmt.Println("== in the first row, autoaccepted")
-				biggestInRow = f[i][j]
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
-				continue
-			}
-			if f[i][j] > biggestInRow {
-				fmt.Println("== bigger than biggest, thus visible", f[i][j], ">", biggestInRow)
-				biggestInRow = f[i][j]
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
-				continue
-			} else {
-				fmt.Println("== not bigger than the biggest, thus continuing", f[i][j], "<=", biggestInRow)
-				continue
-			}
-
-		}
-	}
-}
-
-func (f Forest) getTreesVisibleFromBottom(visibleTreesMap *map[string]bool) {
-	for i := len(f) - 1; i >= 0; i-- {
-		biggestSoFar := 0
-		for j := len(f[i]) - 1; j >= 0; j-- {
-			fmt.Println("processing", j, i)
-			if f[j][i] == 9 {
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				break
-			}
-			if j == len(f)-1 {
-				fmt.Println("== in the first row, autoaccepted")
-				biggestSoFar = f[j][i]
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				continue
-			}
-			if f[j][i] > biggestSoFar {
-				fmt.Println("== bigger than the biggest so far", f[j][i], ">", biggestSoFar)
-				biggestSoFar = f[j][i]
-				(*visibleTreesMap)[strconv.Itoa(j)+","+strconv.Itoa(i)] = true
-				continue
-			} else {
-				fmt.Println("== not bigger than the biggest so far, continuing", f[j][i], "<=", biggestSoFar)
-				continue
-			}
-
-		}
+func getTree(f Forest, i, j int, iFirst bool) int {
+	if iFirst {
+		return f[i][j]
+	} else {
+		return f[j][i]
 	}
 }
 
-func (f Forest) getTreesVisibleFromLeft(visibleTreesMap *map[string]bool) {
-	for i := 0; i < len(f); i++ {
-		biggestSoFar := 0
-		for j := 0; j < len(f[0]); j++ {
-			if f[i][j] == 9 {
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
+func makeTreeKey(i, j int, iFirst bool) string {
+	if iFirst {
+		return strconv.Itoa(i) + "," + strconv.Itoa(j)
+	} else {
+		return strconv.Itoa(j) + "," + strconv.Itoa(i)
+	}
+}
+
+func directionalFor[T any](arr []T, direction string, fn func(int, T) string) {
+	if direction == "forward" {
+		for i := 0; i < len(arr); i++ {
+			if fn(i, arr[i]) == "break" {
 				break
 			}
-			if j == 0 {
-				biggestSoFar = f[i][j]
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
-				continue
+		}
+	}
+	if direction == "back" {
+		for i := len(arr) - 1; i >= 0; i-- {
+			if fn(i, arr[i]) == "break" {
+				break
 			}
-			if f[i][j] > biggestSoFar {
-				biggestSoFar = f[i][j]
-				(*visibleTreesMap)[strconv.Itoa(i)+","+strconv.Itoa(j)] = true
-				continue
-			}
-
 		}
 	}
 }
