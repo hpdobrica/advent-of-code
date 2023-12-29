@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hpdobrica/advent-of-code/util"
@@ -17,12 +18,28 @@ func main() {
 
 	util.PanicIfErr(err)
 
+	var wg sync.WaitGroup
+	limiter := make(chan struct{}, 10)
+	sumChan := make(chan int)
+
 	sumOfValidIds := 0
 
 	util.ForLineOfFile(file, func(line string) {
-
-		sumOfValidIds += getIdOfValidGameOrZero(line)
+		limiter <- struct{}{}
+		wg.Add(1)
+		go processLine(line, &wg, sumChan)
+		<-limiter
 	})
+
+	go func() {
+		wg.Wait()
+		close(sumChan)
+	}()
+
+	for id := range sumChan {
+		sumOfValidIds += id
+	}
+
 	fmt.Println("Sum of valid game ids is: ", sumOfValidIds)
 	elapsed := time.Since(start)
 	fmt.Println("Elapsed: ", elapsed)
@@ -38,6 +55,12 @@ type RoundData struct {
 	Red   int
 	Green int
 	Blue  int
+}
+
+func processLine(line string, wg *sync.WaitGroup, ch chan<- int) {
+	defer wg.Done()
+	ch <- getIdOfValidGameOrZero(line)
+
 }
 
 func getIdOfValidGameOrZero(line string) int {
