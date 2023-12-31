@@ -20,29 +20,49 @@ func main() {
 
 	var wg sync.WaitGroup
 	limiter := make(chan struct{}, 10)
-	sumChan := make(chan int)
+	sumOfValidIdsChan := make(chan int)
+	sumOfPowersChan := make(chan int)
 
 	sumOfValidIds := 0
+	sumOfPowers := 0
 
 	util.ForLineOfFile(file, func(line string) {
 		limiter <- struct{}{}
 		wg.Add(1)
-		go processLine(line, &wg, sumChan)
+		go processLine(line, &wg, sumOfValidIdsChan, sumOfPowersChan)
 		<-limiter
 	})
 
 	go func() {
 		wg.Wait()
-		close(sumChan)
+		close(sumOfValidIdsChan)
+		close(sumOfPowersChan)
 	}()
 
-	for id := range sumChan {
-		sumOfValidIds += id
-	}
+	var readWg sync.WaitGroup
+
+	readWg.Add(2) // reading from 2 channels
+
+	go func() {
+		defer readWg.Done()
+		for id := range sumOfValidIdsChan {
+			sumOfValidIds += id
+		}
+	}()
+
+	go func() {
+		defer readWg.Done()
+		for power := range sumOfPowersChan {
+			sumOfPowers += power
+		}
+	}()
+
+	readWg.Wait()
 
 	fmt.Println("Sum of valid game ids is: ", sumOfValidIds)
+	fmt.Println("Sum powers of min number of cubes is: ", sumOfPowers)
 	elapsed := time.Since(start)
-	fmt.Println("Elapsed: ", elapsed)
+	fmt.Println("Done after ", elapsed)
 
 }
 
@@ -57,20 +77,39 @@ type RoundData struct {
 	Blue  int
 }
 
-func processLine(line string, wg *sync.WaitGroup, ch chan<- int) {
+func processLine(line string, wg *sync.WaitGroup, idsChan chan<- int, powersChan chan<- int) {
 	defer wg.Done()
-	ch <- getIdOfValidGameOrZero(line)
+	gameData := lineToGameData(line)
+	idsChan <- getIdOfValidGameOrZero(gameData)
+	powersChan <- getPowerOfMinCubes(gameData)
 
 }
 
-func getIdOfValidGameOrZero(line string) int {
-
-	gameData := lineToGameData(line)
-
+func getIdOfValidGameOrZero(gameData GameData) int {
 	if isGameValid(gameData) {
 		return gameData.ID
 	}
 	return 0
+}
+
+func getPowerOfMinCubes(game GameData) int {
+	minRed := 0
+	minGreen := 0
+	minBlue := 0
+
+	for _, round := range game.Rounds {
+		if round.Red > minRed {
+			minRed = round.Red
+		}
+		if round.Green > minGreen {
+			minGreen = round.Green
+		}
+		if round.Blue > minBlue {
+			minBlue = round.Blue
+		}
+	}
+
+	return minRed * minGreen * minBlue
 }
 
 func isGameValid(game GameData) bool {
