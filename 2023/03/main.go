@@ -28,7 +28,8 @@ func main() {
 }
 
 func getSumOfEngineParts(engineMap EngineMap) int {
-	sum := 0
+	sumOfEngineParts := 0
+	// sumOfGearRatios := 0
 
 	tmpNumString := ""
 	tmpNumICol := 0
@@ -42,36 +43,23 @@ func getSumOfEngineParts(engineMap EngineMap) int {
 				tmpNumString += col.value
 
 				if iCol == len(row)-1 {
-					sum += getPartNumberOrZero(engineMap, tmpNumString, iRow, tmpNumICol)
+					sumOfEngineParts += getPartNumberOrZero(engineMap, tmpNumString, iRow, tmpNumICol)
 					tmpNumICol = 0
 					tmpNumString = ""
 				}
-			} else if col.kind == KIND_SYMBOL {
+			} else {
 				if tmpNumICol == 0 && tmpNumString == "" {
 					continue
 				}
 
-				numInt, err := strconv.Atoi(tmpNumString)
-				util.PanicIfErr(err)
-
-				sum += numInt
-
-				tmpNumICol = 0
-				tmpNumString = ""
-
-			} else if col.kind == KIND_EMPTY {
-				if tmpNumICol == 0 && tmpNumString == "" {
-					continue
-				}
-
-				sum += getPartNumberOrZero(engineMap, tmpNumString, iRow, tmpNumICol)
+				sumOfEngineParts += getPartNumberOrZero(engineMap, tmpNumString, iRow, tmpNumICol)
 				tmpNumICol = 0
 				tmpNumString = ""
 			}
 		}
 	}
 
-	return sum
+	return sumOfEngineParts
 }
 
 func getPartNumberOrZero(engineMap EngineMap, numString string, iRow, iCol int) int {
@@ -81,6 +69,11 @@ func getPartNumberOrZero(engineMap EngineMap, numString string, iRow, iCol int) 
 
 	// check left
 	if iCol > 0 && engineMap[iRow][iCol-1].kind == KIND_SYMBOL {
+		return partNumber
+	}
+
+	// check right
+	if iCol+len(numString) < len(engineMap[iRow])-1 && engineMap[iRow][iCol+len(numString)].kind == KIND_SYMBOL {
 		return partNumber
 	}
 
