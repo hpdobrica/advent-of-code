@@ -17,53 +17,94 @@ func main() {
 	file, err := os.Open("./input.txt")
 	util.PanicIfErr(err)
 
-	sumOfPoints := processInput(file)
+	sumOfPoints, totalCardsProcessed := processInput(file)
 
 	fmt.Println("Total point worth of cards is ", sumOfPoints)
+	fmt.Println("Total cards processed with duplicates is ", totalCardsProcessed)
 
 	elapsed := time.Since(start)
 	fmt.Println("Done after ", elapsed)
 
 }
 
-func processInput(file *os.File) int {
+func processInput(file *os.File) (int, int) {
 	sumOfPoints := 0
+	totalCardsProcessed := 0
+	duplicatesMap := make(map[int]int)
 	util.ForLineOfFile(file, func(line string) {
-		sumOfCardPoints := 0
-		winningNumbers, elfsNumbers := parseLine(line)
-		fmt.Println(winningNumbers, elfsNumbers)
+		scratchcard := parseScratchcard(line)
 
-		winningMap := make(map[int]int)
+		numberOfHits := processScratchcard(scratchcard, duplicatesMap)
+		totalCardsProcessed++
+		cardPoints := numberOfHitsToCardPoints(numberOfHits)
 
-		for _, winningNum := range winningNumbers {
-			_, exists := winningMap[winningNum]
-			if !exists {
-				winningMap[winningNum] = 0
+		numOfDuplicates, exists := duplicatesMap[scratchcard.CardNumber]
+		if exists {
+			for i := 0; i < numOfDuplicates; i++ {
+				processScratchcard(scratchcard, duplicatesMap)
+				totalCardsProcessed++
 			}
 		}
 
-		for _, elfsNum := range elfsNumbers {
-			_, exists := winningMap[elfsNum]
-			if exists {
-				winningMap[elfsNum] = winningMap[elfsNum] + 1
-
-				if sumOfCardPoints == 0 {
-					sumOfCardPoints = 1
-				} else {
-					sumOfCardPoints = sumOfCardPoints * 2
-				}
-			}
-		}
-		sumOfPoints += sumOfCardPoints
+		sumOfPoints += cardPoints
 	})
 
-	return sumOfPoints
+	return sumOfPoints, totalCardsProcessed
 
 }
 
-func parseLine(line string) ([]int, []int) {
+func processScratchcard(scratchcard Scratchcard, duplicatesMap map[int]int) int {
+	sumOfCardPoints := 0
+	winningMap := make(map[int]bool)
+
+	for _, winningNum := range scratchcard.WinningNumbers {
+		_, exists := winningMap[winningNum]
+		if !exists {
+			winningMap[winningNum] = true
+		}
+	}
+
+	numberOfHits := 0
+	for _, elfsNum := range scratchcard.YourNumbers {
+		_, exists := winningMap[elfsNum]
+		if exists {
+			numberOfHits++
+
+			if sumOfCardPoints == 0 {
+				sumOfCardPoints = 1
+			} else {
+				sumOfCardPoints = sumOfCardPoints * 2
+			}
+		}
+	}
+
+	for i := 1; i <= numberOfHits; i++ {
+		oldNum, exists := duplicatesMap[scratchcard.CardNumber+i]
+		if exists {
+			duplicatesMap[scratchcard.CardNumber+i] = oldNum + 1
+		} else {
+			duplicatesMap[scratchcard.CardNumber+i] = 1
+		}
+	}
+
+	return numberOfHits
+}
+
+type Scratchcard struct {
+	CardNumber     int
+	WinningNumbers []int
+	YourNumbers    []int
+}
+
+func parseScratchcard(line string) Scratchcard {
 	splitByColon := strings.Split(line, ":")
 	if len(splitByColon) != 2 {
+		panic("invalid format")
+	}
+
+	cardNumberString := strings.Fields(splitByColon[0])[1]
+	cardNumber, err := strconv.Atoi(cardNumberString)
+	if err != nil {
 		panic("invalid format")
 	}
 
@@ -81,13 +122,29 @@ func parseLine(line string) ([]int, []int) {
 	}
 
 	elfsStrings := strings.Fields(splitByPipe[1])
-	elfsNumbers := make([]int, len(elfsStrings))
+	yourNumbers := make([]int, len(elfsStrings))
 	for i, numStr := range elfsStrings {
 		var err error
-		elfsNumbers[i], err = strconv.Atoi(numStr)
+		yourNumbers[i], err = strconv.Atoi(numStr)
 		util.PanicIfErr(err)
 	}
 
-	return winningNumbers, elfsNumbers
+	return Scratchcard{
+		CardNumber:     cardNumber,
+		WinningNumbers: winningNumbers,
+		YourNumbers:    yourNumbers,
+	}
+
+}
+
+func numberOfHitsToCardPoints(numberOfHits int) int {
+	if numberOfHits == 0 {
+		return 0
+	}
+	score := 1
+	for i := 1; i < numberOfHits; i++ {
+		score = score * 2
+	}
+	return score
 
 }
