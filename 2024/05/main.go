@@ -74,70 +74,9 @@ func processInput(file *os.File) int {
 	sum := 0
 
 	for _, updateSeq := range updates {
-		updateSeqValid := true
-		for i, current := range updateSeq {
-			if !updateSeqValid {
-				break
-			}
+		updateSeqValid := checkSeq(updateSeq, rules)
 
-			before := updateSeq[:i]
-			after := updateSeq[i+1:]
-
-			beforeClear := false
-			afterClear := false
-			// fmt.Println("working on", current, before, after)
-			if beforeRule, ok := rules[current]["after"]; ok {
-
-				for _, u := range before {
-					tmpBeforeClear := false
-					for _, r := range beforeRule {
-						// fmt.Println("checking before", before, u, r)
-						if u == r {
-							tmpBeforeClear = true
-						}
-					}
-					beforeClear = tmpBeforeClear
-					// fmt.Println("before clear", beforeClear)
-					if !beforeClear {
-						break
-					}
-				}
-				if len(before) == 0 {
-					beforeClear = true
-				}
-
-			} else {
-				beforeClear = true
-			}
-			if afterRule, ok := rules[current]["before"]; ok {
-				for _, u := range after {
-					tmpAfterClear := false
-					for _, r := range afterRule {
-						// fmt.Println("checking after", after, u, r)
-						if u == r {
-							tmpAfterClear = true
-						}
-					}
-					afterClear = tmpAfterClear
-					// fmt.Println("after clear", afterClear)
-					if !afterClear {
-						break
-					}
-				}
-				if len(after) == 0 {
-					afterClear = true
-				}
-			} else {
-				afterClear = true
-			}
-
-			// fmt.Println(updateSeq)
-			// fmt.Println(current, beforeClear, afterClear)
-
-			updateSeqValid = beforeClear && afterClear
-
-		}
-		fmt.Println("finally", updateSeq, updateSeqValid)
+		// fmt.Println("finally", updateSeq, updateSeqValid)
 		if updateSeqValid {
 			sum += updateSeq[len(updateSeq)/2]
 		}
@@ -145,6 +84,75 @@ func processInput(file *os.File) int {
 	}
 
 	return sum
+
+}
+
+type SeqUpdateFailure struct {
+	index    int
+	ruleType string
+	rule     []int
+}
+
+func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
+	for i, current := range updateSeq {
+
+		before := updateSeq[:i]
+		after := updateSeq[i+1:]
+
+		beforeClear := false
+		afterClear := false
+		// fmt.Println("working on", current, before, after)
+		if beforeRule, ok := rules[current]["after"]; ok {
+
+			for _, u := range before {
+				tmpBeforeClear := false
+				for _, r := range beforeRule {
+					// fmt.Println("checking before", before, u, r)
+					if u == r {
+						tmpBeforeClear = true
+					}
+				}
+				beforeClear = tmpBeforeClear
+				// fmt.Println("before clear", beforeClear)
+				if !beforeClear {
+					return false
+				}
+			}
+			if len(before) == 0 {
+				beforeClear = true
+			}
+
+		} else {
+			beforeClear = true
+		}
+		if afterRule, ok := rules[current]["before"]; ok {
+			for _, u := range after {
+				tmpAfterClear := false
+				for _, r := range afterRule {
+					// fmt.Println("checking after", after, u, r)
+					if u == r {
+						tmpAfterClear = true
+					}
+				}
+				afterClear = tmpAfterClear
+				// fmt.Println("after clear", afterClear)
+				if !afterClear {
+					return false
+				}
+			}
+			if len(after) == 0 {
+				afterClear = true
+			}
+		} else {
+			afterClear = true
+		}
+
+		// fmt.Println(updateSeq)
+		// fmt.Println(current, beforeClear, afterClear)
+
+	}
+	// fmt.Println("finally", updateSeq, updateSeqValid)
+	return true
 
 }
 
