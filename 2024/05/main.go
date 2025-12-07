@@ -24,15 +24,17 @@ func main() {
 	file, err := os.Open(fileName)
 	util.PanicIfErr(err)
 
-	sum := processInput(file)
+	sum, badSum := processInput(file)
 
 	fmt.Println("total xmases found ", sum)
+
+	fmt.Println("total fixed xmases found ", badSum)
 
 	elapsed := time.Since(start)
 	fmt.Println("Done after ", elapsed)
 }
 
-func processInput(file *os.File) int {
+func processInput(file *os.File) (int, int) {
 
 	rules := make(map[int]map[string][]int)
 	updates := make([][]int, 0)
@@ -72,28 +74,31 @@ func processInput(file *os.File) int {
 	fmt.Println(rules)
 
 	sum := 0
+	badSum := 0
 
 	for _, updateSeq := range updates {
-		updateSeqValid := checkSeq(updateSeq, rules)
+		updateSeqValid, swapI, swapJ := checkSeq(updateSeq, rules)
 
 		// fmt.Println("finally", updateSeq, updateSeqValid)
-		if updateSeqValid {
+		if !updateSeqValid {
+			for updateSeqValid == false {
+				tmp := updateSeq[swapJ]
+				updateSeq[swapJ] = updateSeq[swapI]
+				updateSeq[swapI] = tmp
+				updateSeqValid, swapI, swapJ = checkSeq(updateSeq, rules)
+			}
+			badSum += updateSeq[len(updateSeq)/2]
+		} else {
 			sum += updateSeq[len(updateSeq)/2]
 		}
 
 	}
 
-	return sum
+	return sum, badSum
 
 }
 
-type SeqUpdateFailure struct {
-	index    int
-	ruleType string
-	rule     []int
-}
-
-func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
+func checkSeq(updateSeq []int, rules map[int]map[string][]int) (bool, int, int) {
 	for i, current := range updateSeq {
 
 		before := updateSeq[:i]
@@ -104,7 +109,7 @@ func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
 		// fmt.Println("working on", current, before, after)
 		if beforeRule, ok := rules[current]["after"]; ok {
 
-			for _, u := range before {
+			for j, u := range before {
 				tmpBeforeClear := false
 				for _, r := range beforeRule {
 					// fmt.Println("checking before", before, u, r)
@@ -115,7 +120,8 @@ func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
 				beforeClear = tmpBeforeClear
 				// fmt.Println("before clear", beforeClear)
 				if !beforeClear {
-					return false
+					fmt.Println("failing on", updateSeq, current, i, j)
+					return false, i, j
 				}
 			}
 			if len(before) == 0 {
@@ -126,7 +132,7 @@ func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
 			beforeClear = true
 		}
 		if afterRule, ok := rules[current]["before"]; ok {
-			for _, u := range after {
+			for j, u := range after {
 				tmpAfterClear := false
 				for _, r := range afterRule {
 					// fmt.Println("checking after", after, u, r)
@@ -137,7 +143,8 @@ func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
 				afterClear = tmpAfterClear
 				// fmt.Println("after clear", afterClear)
 				if !afterClear {
-					return false
+					fmt.Println("failing on", updateSeq, current, i, j+i+1, afterRule)
+					return false, i, j + i + 1
 				}
 			}
 			if len(after) == 0 {
@@ -152,7 +159,7 @@ func checkSeq(updateSeq []int, rules map[int]map[string][]int) bool {
 
 	}
 	// fmt.Println("finally", updateSeq, updateSeqValid)
-	return true
+	return true, -1, -1
 
 }
 
