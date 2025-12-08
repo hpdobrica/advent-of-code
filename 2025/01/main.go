@@ -37,10 +37,12 @@ func processInput(file *os.File) int {
 	dial := NewDial()
 	numberOfZeros := 0
 	util.ForLineOfFile(file, func(command string) {
-		positionAfterMove := dial.move(command)
-		if positionAfterMove == 0 {
-			numberOfZeros += 1
-		}
+		_, zerosEncounteredDuringRotation := dial.move(command)
+		newNumberOfZeros := 0
+		newNumberOfZeros += zerosEncounteredDuringRotation
+
+		fmt.Printf(" +%d\n", newNumberOfZeros)
+		numberOfZeros += newNumberOfZeros
 	})
 
 	return numberOfZeros
@@ -63,22 +65,37 @@ func NewDial() Dial {
 	return dial
 }
 
-func (d *Dial) move(command string) int {
+func (d *Dial) move(command string) (int, int) {
+	var zerosEncounteredDuringRotation int = 0
 	var direction string = string(command[0])
 	distance, _ := strconv.Atoi(command[1:])
-	fmt.Println(direction, distance)
 
 	if direction == "R" {
-		d.position = (d.position + distance) % 100
-	}
-	if direction == "L" {
-		newPosition := d.position - distance
-		for newPosition < 0 {
-			newPosition = 100 + newPosition
-		}
+		newPosition := (d.position + distance) % 100
+		zerosEncounteredDuringRotation += (d.position + distance) / 100
 		d.position = newPosition
 
 	}
-	fmt.Println("lands at", d.position)
-	return d.position
+	if direction == "L" {
+		newPosition := d.position - distance
+		if newPosition == 0 {
+			zerosEncounteredDuringRotation += 1
+		}
+		for newPosition < 0 {
+			newPosition = 100 + newPosition
+			zerosEncounteredDuringRotation += 1
+			if newPosition == 0 {
+				zerosEncounteredDuringRotation += 1
+			}
+
+		}
+		if d.position == 0 {
+			zerosEncounteredDuringRotation -= 1
+		}
+
+		d.position = newPosition
+
+	}
+	fmt.Printf("%s (%d)", command, d.position)
+	return d.position, zerosEncounteredDuringRotation
 }
